@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UKSimRacing - Debug Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 95%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .debug-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #dc3545;
+        }
+
+        button {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .back-button {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        }
+
+        .back-button:hover {
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .debug-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+
+        .debug-output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐛 UKSimRacing Debug Mode</h1>
+            <p>Raw API Data & Development Tools</p>
+            <button onclick="window.location.href='/'" class="back-button">← Back to Main App</button>
+        </div>
+
+        <!-- Authentication Section -->
+        <div class="debug-section">
+            <h2>🔐 Authentication Status</h2>
+            <div id="authStatus"></div>
+            <div id="authForm">
+                <div class="form-group">
+                    <label for="username">iRacing Username/Email:</label>
+                    <input type="email" id="username" placeholder="your.email@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">iRacing Password:</label>
+                    <input type="password" id="password" placeholder="Your iRacing password">
+                </div>
+                <button onclick="authenticate()">Connect to iRacing</button>
+            </div>
+        </div>
+
+        <!-- Debug Section -->
+        <div class="debug-section">
+            <h2>🔧 Raw API Data Fetcher</h2>
+            <div class="form-group">
+                <label for="debugEndpoint">API Endpoint or Subsession ID:</label>
+                <input type="text" id="debugEndpoint" class="debug-input" placeholder="Enter subsession ID (e.g., 12345) or endpoint path (e.g., /data/league/get?league_id=1234)">
+                <small style="color: #666;">
+                    Examples:<br>
+                    • Subsession ID: 12345<br>
+                    • League info: /data/league/get?league_id=1234<br>
+                    • Season sessions: /data/league/season_sessions?league_id=1234&season_id=5678
+                </small>
+            </div>
+            <button onclick="debugFetchData()">Fetch Raw Data</button>
+            <button onclick="clearDebugOutput()">Clear Output</button>
+            <div class="form-group">
+                <label>Raw JSON Response:</label>
+                <div id="debugOutput" class="debug-output">Debug output will appear here...</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="debug-section">
+            <h2>⚡ Quick Debug Actions</h2>
+            <button onclick="debugQuickAction('league', '7965')">Test League 7965</button>
+            <button onclick="debugQuickAction('seasons', '7965')">Get League 7965 Seasons</button>
+            <button onclick="debugQuickAction('roster', '7965')">Get League 7965 Roster</button>
+            <button onclick="clearDebugOutput()">Clear All</button>
+        </div>
+
+        <!-- Championship Points Assignment Debug -->
+        <div class="debug-section">
+            <h2>🏆 Championship Points Assignment Debug</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                Analyze championship points breakdown per race including finish position, pole position bonus, fastest lap bonus, and penalty points.
+            </p>
+            
+            <div class="form-group">
+                <label for="pointsLeagueId">League ID:</label>
+                <input type="text" id="pointsLeagueId" placeholder="e.g., 7965" value="7965" onchange="loadSeasons()" onblur="loadSeasons()">
+                <button onclick="loadSeasons()" style="margin-top: 5px; padding: 8px 15px; font-size: 12px;">Load Seasons</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="pointsSeasonId">Season:</label>
+                <select id="pointsSeasonId" onchange="loadDivisions(); loadDrivers();">
+                    <option value="">Select a season...</option>
+                </select>
+                <button onclick="loadDrivers()" style="margin-top: 5px; padding: 8px 15px; font-size: 12px;">Load Divisions & Drivers</button>
+                <small style="color: #666; font-size: 0.9em;">
+                    Enter a League ID above to load available seasons. Loading divisions & drivers can take up to 60 seconds.
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="pointsDivision">Division (optional):</label>
+                <select id="pointsDivision">
+                    <option value="">All divisions</option>
+                </select>
+                <small style="color: #666; font-size: 0.9em;">
+                    Select a season above to load available divisions
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="pointsDriver">Driver (optional):</label>
+                <select id="pointsDriver">
+                    <option value="">All drivers</option>
+                </select>
+                <small style="color: #666; font-size: 0.9em;">
+                    Select a season above to load available drivers
+                </small>
+            </div>
+            
+            <button onclick="debugChampionshipPoints()">Analyze Championship Points</button>
+            <button onclick="clearPointsOutput()">Clear Points Output</button>
+            
+            <div class="form-group">
+                <label>Championship Points Breakdown:</label>
+                <div id="pointsOutput" class="debug-output">Championship points analysis will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Authentication functions
+        async function authenticate() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                alert('Please enter both username and password');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('authStatus').innerHTML = `
+                        <div class="status success">
+                            Authentication successful! Customer ID: ${data.customer_id}
+                            <button onclick="logout()" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Logout</button>
+                        </div>
+                    `;
+                    document.getElementById('authForm').style.display = 'none';
+                } else {
+                    document.getElementById('authStatus').innerHTML = `
+                        <div class="status error">Authentication failed: ${data.error}</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status error">Authentication error: ${error.message}</div>
+                `;
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                document.getElementById('authStatus').innerHTML = '';
+                document.getElementById('authForm').style.display = 'block';
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        // Debug functions
+        async function debugFetchData() {
+            const endpoint = document.getElementById('debugEndpoint').value.trim();
+            const output = document.getElementById('debugOutput');
+            
+            if (!endpoint) {
+                output.textContent = 'Please enter an endpoint or subsession ID';
+                return;
+            }
+
+            try {
+                output.textContent = 'Fetching data...';
+                
+                let url;
+                if (/^\d+$/.test(endpoint)) {
+                    // If it's just numbers, treat as subsession ID
+                    url = `/api/results/${endpoint}`;
+                } else if (endpoint.startsWith('/')) {
+                    // If it starts with /, it's a direct API path
+                    url = `/debug/api${endpoint}`;
+                } else {
+                    // Otherwise, assume it's a subsession ID
+                    url = `/api/results/${endpoint}`;
+                }
+                
+                const response = await fetch(url, {
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                output.textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                console.error('Debug fetch error:', error);
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function debugQuickAction(type, leagueId) {
+            const output = document.getElementById('debugOutput');
+            
+            try {
+                output.textContent = `Fetching ${type} data for league ${leagueId}...`;
+                
+                let url;
+                switch (type) {
+                    case 'league':
+                        url = `/api/league/${leagueId}`;
+                        break;
+                    case 'seasons':
+                        url = `/api/league/${leagueId}/seasons`;
+                        break;
+                    case 'roster':
+                        url = `/api/league/${leagueId}/roster`;
+                        break;
+                    default:
+                        throw new Error('Unknown action type');
+                }
+                
+                const response = await fetch(url, {
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                output.textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                console.error('Quick action error:', error);
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function clearDebugOutput() {
+            document.getElementById('debugOutput').textContent = 'Debug output cleared...';
+        }
+
+        // Championship Points Debug Functions
+        async function debugChampionshipPoints() {
+            const leagueId = document.getElementById('pointsLeagueId').value.trim();
+            const seasonId = document.getElementById('pointsSeasonId').value.trim();
+            const division = document.getElementById('pointsDivision').value.trim();
+            const driver = document.getElementById('pointsDriver').value.trim();
+            const output = document.getElementById('pointsOutput');
+            
+            if (!leagueId || !seasonId) {
+                output.textContent = 'Please enter both League ID and Season ID';
+                return;
+            }
+
+            try {
+                output.textContent = 'Fetching championship data and analyzing points...';
+                
+                // Build URL with optional division filter
+                let url = `/api/league/${leagueId}/season/${seasonId}/championship`;
+                if (division) {
+                    url += `?division=${encodeURIComponent(division)}`;
+                }
+                
+                const response = await fetch(url, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Format the championship points breakdown
+                const formattedOutput = formatChampionshipPointsBreakdown(data, driver);
+                output.textContent = formattedOutput;
+                
+            } catch (error) {
+                console.error('Championship points debug error:', error);
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function loadSeasons() {
+            const leagueId = document.getElementById('pointsLeagueId').value.trim();
+            const seasonSelect = document.getElementById('pointsSeasonId');
+            const driverSelect = document.getElementById('pointsDriver');
+            const divisionSelect = document.getElementById('pointsDivision');
+            
+            // Clear existing options
+            seasonSelect.innerHTML = '<option value="">Select a season...</option>';
+            driverSelect.innerHTML = '<option value="">All drivers</option>';
+            divisionSelect.innerHTML = '<option value="">All divisions</option>';
+            
+            if (!leagueId) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/league/${leagueId}/seasons`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.seasons && data.seasons.length > 0) {
+                    data.seasons.forEach(season => {
+                        const option = document.createElement('option');
+                        option.value = season.season_id;
+                        option.textContent = `${season.season_name} (ID: ${season.season_id})`;
+                        seasonSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No seasons found';
+                    seasonSelect.appendChild(option);
+                }
+                
+            } catch (error) {
+                console.error('Error loading seasons:', error);
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error loading seasons';
+                seasonSelect.appendChild(option);
+            }
+        }
+
+        async function loadDivisions() {
+            const leagueId = document.getElementById('pointsLeagueId').value.trim();
+            const seasonId = document.getElementById('pointsSeasonId').value.trim();
+            const divisionSelect = document.getElementById('pointsDivision');
+            
+            // Clear existing options
+            divisionSelect.innerHTML = '<option value="">All divisions</option>';
+            
+            if (!leagueId || !seasonId) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Select league and season first';
+                divisionSelect.appendChild(option);
+                return;
+            }
+
+            try {
+                // Get championship data to extract division list
+                const response = await fetch(`/api/league/${leagueId}/season/${seasonId}/championship`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.all_divisions && data.all_divisions.length > 0) {
+                    data.all_divisions.forEach(division => {
+                        const option = document.createElement('option');
+                        option.value = division;
+                        option.textContent = division;
+                        divisionSelect.appendChild(option);
+                    });
+                } else if (data.standings && Object.keys(data.standings).length > 0) {
+                    // Fallback: extract divisions from standings
+                    Object.keys(data.standings).forEach(division => {
+                        const option = document.createElement('option');
+                        option.value = division;
+                        option.textContent = division;
+                        divisionSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No divisions found';
+                    divisionSelect.appendChild(option);
+                }
+                
+            } catch (error) {
+                console.error('Error loading divisions:', error);
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error loading divisions';
+                divisionSelect.appendChild(option);
+            }
+        }
+
+        async function loadDrivers() {
+            const leagueId = document.getElementById('pointsLeagueId').value.trim();
+            const seasonId = document.getElementById('pointsSeasonId').value.trim();
+            const driverSelect = document.getElementById('pointsDriver');
+            
+            // Clear existing options
+            driverSelect.innerHTML = '<option value="">All drivers</option>';
+            
+            if (!leagueId || !seasonId) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Select league and season first';
+                driverSelect.appendChild(option);
+                return;
+            }
+
+            try {
+                // Get championship data to extract driver list
+                const response = await fetch(`/api/league/${leagueId}/season/${seasonId}/championship`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.standings && Object.keys(data.standings).length > 0) {
+                    const allDrivers = [];
+                    
+                    // Collect all drivers from all divisions
+                    Object.values(data.standings).forEach(drivers => {
+                        drivers.forEach(driver => {
+                            allDrivers.push({
+                                cust_id: driver.cust_id,
+                                display_name: driver.display_name,
+                                division: driver.division,
+                                car_number: driver.car_number
+                            });
+                        });
+                    });
+                    
+                    // Sort drivers by name
+                    allDrivers.sort((a, b) => a.display_name.localeCompare(b.display_name));
+                    
+                    // Add drivers to dropdown
+                    allDrivers.forEach(driver => {
+                        const option = document.createElement('option');
+                        option.value = driver.cust_id;
+                        option.textContent = `${driver.display_name} (#${driver.car_number || 'N/A'}) - ${driver.division}`;
+                        driverSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No drivers found';
+                    driverSelect.appendChild(option);
+                }
+                
+            } catch (error) {
+                console.error('Error loading drivers:', error);
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error loading drivers';
+                driverSelect.appendChild(option);
+            }
+        }
+
+        function formatChampionshipPointsBreakdown(data, driverFilter = '') {
+            if (!data.standings || Object.keys(data.standings).length === 0) {
+                return 'No championship data available. Make sure the season has completed races and you have proper authentication.';
+            }
+
+            let output = '';
+            
+            // Add configuration info
+            const config = data.points_config || {};
+            output += '=== CHAMPIONSHIP POINTS CONFIGURATION ===\n';
+            output += `Points System: ${config.name || 'Unknown'}\n`;
+            output += `Drop Weeks: ${config.dropWeeks || 0}\n`;
+            output += `Fastest Lap Bonus: ${config.fastestLapPoints || 0} points\n`;
+            output += `Pole Position Bonus: ${config.polePositionPoints || 0} points\n`;
+            output += `Penalties: Included in calculations\n\n`;
+
+            // Handle different API response formats
+            let standingsToProcess = {};
+            
+            // Check if data.standings is an array (filtered response) or object (normal response)
+            if (Array.isArray(data.standings)) {
+                // When filtering by division, API returns an array directly
+                const divisionName = data.division || 'Selected Division';
+                standingsToProcess[divisionName] = data.standings;
+            } else {
+                // Normal response with division names as keys
+                standingsToProcess = data.standings;
+            }
+
+            // Process each division
+            Object.entries(standingsToProcess).forEach(([divisionName, drivers]) => {
+                output += `=== ${divisionName.toUpperCase()} DIVISION ===\n\n`;
+                
+                // Ensure drivers is an array
+                if (!Array.isArray(drivers)) {
+                    output += `   Error: Invalid data structure for division ${divisionName}\n\n`;
+                    return;
+                }
+                
+                // Filter drivers if driverFilter is specified
+                const filteredDrivers = driverFilter ? 
+                    drivers.filter(driver => driver.cust_id && driver.cust_id.toString() === driverFilter.toString()) : 
+                    drivers;
+                
+                if (filteredDrivers.length === 0) {
+                    if (driverFilter) {
+                        output += `   No driver found with the selected filter in this division.\n\n`;
+                    } else {
+                        output += `   No drivers found in this division.\n\n`;
+                    }
+                    return;
+                }
+                
+                filteredDrivers.forEach((driver, index) => {
+                    // Ensure driver object has required properties
+                    if (!driver || typeof driver !== 'object') {
+                        output += `   Error: Invalid driver data\n`;
+                        return;
+                    }
+                    
+                    // Use original championship position if showing all drivers, otherwise use filtered index
+                    const displayPosition = driverFilter ? (driver.championship_position || 'N/A') : index + 1;
+                    
+                    output += `${displayPosition}. ${driver.display_name || 'Unknown Driver'} (#${driver.car_number || 'N/A'}) - ${driver.total_points || 0} points\n`;
+                    output += `   Races: ${(driver.races && driver.races.length) || 0}, Dropped: ${driver.dropped_races || 0}\n`;
+                    
+                    // Ensure races is an array
+                    if (!driver.races || !Array.isArray(driver.races)) {
+                        output += `   No race data available for this driver.\n\n`;
+                        return;
+                    }
+                    
+                    // Sort races by date
+                    const sortedRaces = [...driver.races].sort((a, b) => new Date(a.date) - new Date(b.date));
+                    
+                    sortedRaces.forEach((race, raceIndex) => {
+                        const raceNum = raceIndex + 1;
+                        const date = race.date ? new Date(race.date).toLocaleDateString() : 'Unknown Date';
+                        const track = race.track_name || 'Unknown Track';
+                        
+                        output += `   Race ${raceNum} (${date}) - ${track}:\n`;
+                        
+                        if (race.attended === false) {
+                            output += `     ❌ Did not attend (0 points)\n`;
+                        } else {
+                            const finishPos = race.division_position ? Math.round(Number(race.division_position)) : 'N/A';
+                            output += `     🏁 Finish: P${finishPos} (${race.position_points || 0} pts)`;
+                            
+                            // Add bonuses and penalties
+                            const bonuses = [];
+                            if (race.pole_position_points > 0) {
+                                bonuses.push(`🏁 Pole: +${race.pole_position_points}`);
+                            }
+                            if (race.fastest_lap_points > 0) {
+                                bonuses.push(`⚡ FL: +${race.fastest_lap_points}`);
+                            }
+                            if (race.penalty_points > 0) {
+                                bonuses.push(`⚠️ Penalty: -${race.penalty_points}${race.penalty_reason ? ` (${race.penalty_reason})` : ''}`);
+                            }
+                            
+                            if (bonuses.length > 0) {
+                                output += ` | ${bonuses.join(' | ')}`;
+                            }
+                            
+                            output += ` = ${race.points || 0} total`;
+                            
+                            if (race.dropped) {
+                                output += ' (DROPPED)';
+                            }
+                            
+                            output += '\n';
+                            
+                            // Add additional race details
+                            if (race.starting_position) {
+                                const startPos = Math.round(Number(race.starting_position));
+                                output += `     📍 Started: P${startPos}`;
+                                if (race.overall_position) {
+                                    const overallPos = Math.round(Number(race.overall_position));
+                                    output += ` | Overall finish: P${overallPos}`;
+                                }
+                                output += '\n';
+                            }
+                            
+                            if (race.best_lap_time > 0) {
+                                const lapTime = formatLapTime(race.best_lap_time);
+                                output += `     ⏱️ Best lap: ${lapTime}`;
+                                if (race.fastest_lap) {
+                                    output += ' (Division FL)';
+                                }
+                                output += '\n';
+                            }
+                        }
+                        
+                        output += '\n';
+                    });
+                    
+                    // Summary stats
+                    const attendedRaces = driver.races.filter(r => r.attended !== false);
+                    if (attendedRaces.length > 0) {
+                        const validPositions = attendedRaces
+                            .map(r => r.division_position ? Math.round(Number(r.division_position)) : null)
+                            .filter(pos => pos !== null && pos > 0);
+                        
+                        if (validPositions.length > 0) {
+                            const avgFinish = (validPositions.reduce((sum, pos) => sum + pos, 0) / validPositions.length).toFixed(1);
+                            const bestFinish = Math.min(...validPositions);
+                            const poles = attendedRaces.filter(r => r.pole_position).length;
+                            const fastestLaps = attendedRaces.filter(r => r.fastest_lap).length;
+                            const totalPenalties = attendedRaces.reduce((sum, r) => sum + (r.penalty_points || 0), 0);
+                            
+                            output += `   📊 Stats: Avg finish P${avgFinish}, Best P${bestFinish}`;
+                            if (poles > 0) output += `, ${poles} pole(s)`;
+                            if (fastestLaps > 0) output += `, ${fastestLaps} FL(s)`;
+                            if (totalPenalties > 0) output += `, ${totalPenalties} penalty pts`;
+                            output += '\n';
+                        }
+                    }
+                    
+                    output += '\n';
+                });
+                
+                output += '\n';
+            });
+
+            return output;
+        }
+
+        function formatLapTime(timeInMs) {
+            if (!timeInMs || timeInMs <= 0) return 'N/A';
+            
+            const totalSeconds = timeInMs / 10000; // iRacing time is in 10000ths of a second
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = (totalSeconds % 60).toFixed(3);
+            
+            return `${minutes}:${seconds.padStart(6, '0')}`;
+        }
+
+        function clearPointsOutput() {
+            document.getElementById('pointsOutput').textContent = 'Championship points analysis cleared...';
+        }
+
+        // Check auth status on page load
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/auth/status', {
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    document.getElementById('authStatus').innerHTML = `
+                        <div class="status success">
+                            Already authenticated! Customer ID: ${data.customer_id}
+                            <button onclick="logout()" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Logout</button>
+                        </div>
+                    `;
+                    document.getElementById('authForm').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Auth status check error:', error);
+            }
+        }
+
+        // Initialize page
+        checkAuthStatus();
+    </script>
+</body>
+</html> 
