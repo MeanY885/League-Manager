@@ -15,26 +15,8 @@ async function fetchIRacingData(endpoint, authCookie) {
     try {
         console.log(`Making request to: ${IRACING_BASE_URL}${endpoint}`);
         
-        // Parse the stored cookie string to extract actual cookie values
-        let cleanCookies = '';
-        if (authCookie) {
-            // Split the authCookie and extract the actual cookie values
-            const cookieParts = authCookie.split(';');
-            const validCookies = [];
-            
-            for (const part of cookieParts) {
-                const trimmed = part.trim();
-                // Look for actual cookie name=value pairs (not attributes)
-                if (trimmed.includes('=') && !trimmed.includes('Max-Age') && !trimmed.includes('Domain') && !trimmed.includes('Path') && !trimmed.includes('Expires')) {
-                    // Extract just the name=value part
-                    const cookieMatch = trimmed.match(/^([^=]+)=([^;]*)/);
-                    if (cookieMatch && cookieMatch[2] && cookieMatch[2].trim() !== '') {
-                        validCookies.push(`${cookieMatch[1]}=${cookieMatch[2]}`);
-                    }
-                }
-            }
-            cleanCookies = validCookies.join('; ');
-        }
+        // Use the stored cookies directly (they should now be properly formatted)
+        const cleanCookies = authCookie || '';
         
         console.log(`Using cookies: ${cleanCookies}`);
         
@@ -101,9 +83,24 @@ async function authenticateWithIRacing(username, password) {
     }
 
     console.log('Received authentication cookies');
+    console.log('Raw Set-Cookie headers:', setCookieHeader);
 
-    // Return the auth cookie
-    return setCookieHeader.join('; ');
+    // Parse cookies properly - extract just the name=value pairs
+    const cookieValues = [];
+    setCookieHeader.forEach(cookieString => {
+        // Each Set-Cookie header is in format: "name=value; attribute=value; attribute"
+        // We only want the name=value part
+        const cookieMatch = cookieString.match(/^([^=]+)=([^;]*)/);
+        if (cookieMatch) {
+            cookieValues.push(`${cookieMatch[1]}=${cookieMatch[2]}`);
+        }
+    });
+
+    const formattedCookies = cookieValues.join('; ');
+    console.log('Formatted cookies for storage:', formattedCookies);
+    
+    // Return the properly formatted cookie string
+    return formattedCookies;
 }
 
 module.exports = {
