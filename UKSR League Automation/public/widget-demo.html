@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Championship Widget Demo - UKSimRacing</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .section {
+            background: white;
+            margin: 30px 0;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #1e3c72;
+            margin-top: 0;
+        }
+
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .demo-container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feature-list li:before {
+            content: "✅ ";
+            margin-right: 10px;
+        }
+
+        .params-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .params-table th,
+        .params-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .params-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #2a5298;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #1e3c72;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 Championship Widget Demo</h1>
+            <p>Embed beautiful championship standings on your website</p>
+        </div>
+
+        <!-- Overview Section -->
+        <div class="section">
+            <h2>📋 Overview</h2>
+            <p>The UKSimRacing Championship Widget allows you to display live championship standings on any website. Choose from multiple embedding options to fit your needs.</p>
+            
+            <ul class="feature-list">
+                <li>Real-time championship data</li>
+                <li>Responsive design</li>
+                <li>Customizable appearance</li>
+                <li>Auto-refresh capabilities</li>
+                <li>Multiple divisions support</li>
+                <li>Easy integration</li>
+            </ul>
+        </div>
+
+        <!-- Embedding Options -->
+        <div class="section">
+            <h2>🔗 Embedding Options</h2>
+            
+            <h3>📄 Method 1: iframe Embed (Simplest)</h3>
+            <p>Copy and paste this HTML directly into any webpage:</p>
+            
+            <h4>Basic Usage</h4>
+            <div class="code-block">
+                <pre><code>&lt;iframe src="https://your-domain.com/championship-widget?leagueId=12345&seasonId=67890" 
+        width="100%" 
+        height="600" 
+        frameborder="0"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+            
+            <h4>Enhanced View with Custom Options</h4>
+            <div class="code-block">
+                <pre><code>&lt;iframe src="https://your-domain.com/championship-widget?leagueId=12345&seasonId=67890&viewType=enhanced&division=Pro&maxRows=10" 
+        width="100%" 
+        height="600" 
+        frameborder="0"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+            
+            <h4>Detailed Race-by-Race Breakdown</h4>
+            <div class="code-block">
+                <pre><code>&lt;iframe src="https://your-domain.com/championship-widget?leagueId=12345&seasonId=67890&viewType=detailed&maxRows=15" 
+        width="100%" 
+        height="700" 
+        frameborder="0"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+
+            <h3>⚡ Method 2: JavaScript Widget (More Flexible)</h3>
+            <p>Include the script and add data attributes for more integration options:</p>
+            
+            <h4>Basic JavaScript Widget</h4>
+            <div class="code-block">
+                <pre><code>&lt;script src="https://your-domain.com/championship-widget.js"&gt;&lt;/script&gt;
+
+&lt;div id="uksimracing-championship" 
+     data-league-id="12345" 
+     data-season-id="67890"&gt;
+&lt;/div&gt;</code></pre>
+            </div>
+            
+            <h4>Enhanced View with Multiple Options</h4>
+            <div class="code-block">
+                <pre><code>&lt;script src="https://your-domain.com/championship-widget.js"&gt;&lt;/script&gt;
+
+&lt;div id="uksimracing-championship" 
+     data-league-id="12345" 
+     data-season-id="67890"
+     data-view-type="enhanced"
+     data-division="Overall"
+     data-max-rows="10"
+     data-show-gap="true"
+     data-auto-refresh="300"&gt;
+&lt;/div&gt;</code></pre>
+            </div>
+            
+            <h4>Statistics View Example</h4>
+            <div class="code-block">
+                <pre><code>&lt;script src="https://your-domain.com/championship-widget.js"&gt;&lt;/script&gt;
+
+&lt;div id="stats-widget" 
+     data-league-id="12345" 
+     data-season-id="67890"
+     data-view-type="stats"
+     data-division="Pro"&gt;
+&lt;/div&gt;</code></pre>
+            </div>
+        </div>
+
+        <!-- Configuration Parameters -->
+        <div class="section">
+            <h2>⚙️ Configuration Parameters</h2>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Parameter</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Required</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Default</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;"><code>leagueId</code></td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">✅ Yes</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">-</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">Your iRacing league ID (numeric)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;"><code>seasonId</code></td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">✅ Yes</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">-</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">Your season ID (numeric)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;"><code>division</code></td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">No</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">Overall</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">Division to display (Overall, Pro, Amateur, etc.)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;"><code>viewType</code></td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">No</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">simple</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">
+                            Championship view type:<br>
+                            • <code>simple</code> - Basic table<br>
+                            • <code>enhanced</code> - Beautiful design with stats<br>
+                            • <code>detailed</code> - Race-by-race breakdown<br>
+                            • <code>stats</code> - Performance statistics<br>
+                            • <code>cars</code> - Car usage analysis
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;"><code>maxRows</code></td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">No</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">0 (all)</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">Maximum number of drivers to show (0 = show all)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;"><code>showGap</code></td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">No</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">true</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">Show points gap to leader (true/false)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;"><code>autoRefresh</code></td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">No</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">0 (disabled)</td>
+                        <td style="padding: 10px; border: 1px solid #dee2e6;">Auto-refresh interval in seconds (0 = disabled)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Live Demos -->
+        <div class="section">
+            <h2>🎯 Live Demos</h2>
+            <p><strong>Note:</strong> These demos will show "Configuration Error" unless you provide valid league and season IDs in the URL parameters.</p>
+            
+            <div class="demo-grid">
+                <div>
+                    <h3>JavaScript Widget Demo</h3>
+                    <div class="demo-container">
+                        <div id="uksimracing-championship-demo1" 
+                             data-league-id="DEMO" 
+                             data-season-id="DEMO"
+                             data-division="Overall"
+                             data-max-rows="5">
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3>Compact Widget Demo</h3>
+                    <div class="demo-container">
+                        <div id="uksimracing-championship-demo2" 
+                             data-league-id="DEMO" 
+                             data-season-id="DEMO"
+                             data-division="Pro"
+                             data-max-rows="3"
+                             data-show-gap="false">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- iframe Demo -->
+        <div class="section">
+            <h2>🖼️ iframe Demo</h2>
+            <p>This is how the standalone widget page looks when embedded via iframe:</p>
+            
+            <div style="border: 2px dashed #ccc; padding: 20px; border-radius: 10px;">
+                <iframe src="championship-widget.html?leagueId=DEMO&seasonId=DEMO&division=Overall&maxRows=5" 
+                        width="100%" 
+                        height="400" 
+                        frameborder="0"
+                        style="border-radius: 8px;">
+                </iframe>
+            </div>
+        </div>
+
+        <!-- Advanced Usage -->
+        <div class="section">
+            <h2>🚀 Advanced Usage</h2>
+            
+            <h3>Multiple Widgets on One Page</h3>
+            <div class="code-block">
+&lt;!-- Pro Division --&gt;
+&lt;div id="championship-pro" 
+     data-league-id="12345" 
+     data-season-id="67890"
+     data-division="Pro"
+     data-max-rows="10"&gt;
+&lt;/div&gt;
+
+&lt;!-- Amateur Division --&gt;
+&lt;div id="championship-am" 
+     data-league-id="12345" 
+     data-season-id="67890"
+     data-division="Amateur"
+     data-max-rows="10"&gt;
+&lt;/div&gt;
+            </div>
+
+            <h3>Manual Control</h3>
+            <div class="code-block">
+&lt;button onclick="document.getElementById('uksimracing-championship').uksr_widget.reload()"&gt;
+    Refresh Championship
+&lt;/button&gt;
+            </div>
+
+            <h3>Styling Customization</h3>
+            <div class="code-block">
+&lt;style&gt;
+.uksimracing-widget {
+    border: 3px solid your-brand-color;
+    border-radius: 15px;
+}
+
+.uksimracing-header {
+    background: your-brand-gradient !important;
+}
+&lt;/style&gt;
+            </div>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="section">
+            <h2>🏁 Getting Started</h2>
+            
+            <ol>
+                <li><strong>Find your League ID:</strong> Look in your iRacing league URL</li>
+                <li><strong>Find your Season ID:</strong> Available from the league seasons API</li>
+                <li><strong>Choose embedding method:</strong> iframe (simple) or JavaScript (flexible)</li>
+                <li><strong>Customize parameters:</strong> Set division, max rows, etc.</li>
+                <li><strong>Add to your website:</strong> Copy and paste the code</li>
+            </ol>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="championship-widget.html" class="btn" target="_blank">View Standalone Widget</a>
+                <a href="championship-widget.js" class="btn" target="_blank">Download JS Widget</a>
+                <a href="/" class="btn">Back to Main App</a>
+            </div>
+        </div>
+
+        <!-- Support -->
+        <div class="section">
+            <h2>🆘 Need Help?</h2>
+            <p>If you need assistance with embedding the championship widget:</p>
+            <ul>
+                <li>Check the browser console for error messages</li>
+                <li>Verify your league and season IDs are correct</li>
+                <li>Ensure CORS is enabled on your server</li>
+                <li>Contact support for custom implementations</li>
+            </ul>
+        </div>
+
+        <h2>🔗 Live Widget Examples</h2>
+        <p>Below are live examples using sample data. Replace the league and season IDs with your own.</p>
+        
+        <!-- Enhanced View Example -->
+        <h3>🚀 Enhanced Championship View</h3>
+        <p>Beautiful design with stats, performance breakdowns, and visual enhancements for top positions.</p>
+        <div style="border: 2px dashed #ddd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <iframe src="/championship-widget?leagueId=7965&seasonId=50644&division=Overall&viewType=enhanced&maxRows=10" 
+                    width="100%" height="600" frameborder="0" style="border-radius: 8px;"></iframe>
+        </div>
+        
+        <!-- Simple View Example -->
+        <h3>📊 Simple Championship View</h3>
+        <p>Clean, basic table perfect for embedding in smaller spaces or when you want minimal styling.</p>
+        <div style="border: 2px dashed #ddd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <iframe src="/championship-widget?leagueId=7965&seasonId=50644&division=Overall&viewType=simple&maxRows=5" 
+                    width="100%" height="400" frameborder="0" style="border-radius: 8px;"></iframe>
+        </div>
+        
+        <!-- Detailed View Example -->
+        <h3>📈 Detailed Championship Breakdown</h3>
+        <p>Race-by-race results showing points earned in each session, with dropped scores and bonuses.</p>
+        <div style="border: 2px dashed #ddd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <iframe src="/championship-widget?leagueId=7965&seasonId=50644&division=Overall&viewType=detailed&maxRows=8" 
+                    width="100%" height="700" frameborder="0" style="border-radius: 8px;"></iframe>
+        </div>
+        
+        <!-- Statistics View Example -->
+        <h3>📈 Championship Statistics</h3>
+        <p>Performance leaders, consistency metrics, and championship insights.</p>
+        <div style="border: 2px dashed #ddd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <iframe src="/championship-widget?leagueId=7965&seasonId=50644&division=Overall&viewType=stats" 
+                    width="100%" height="600" frameborder="0" style="border-radius: 8px;"></iframe>
+        </div>
+        
+        <!-- Car Usage View Example -->
+        <h3>🚗 Car Usage Analysis</h3>
+        <p>Analysis of car choices and usage patterns throughout the championship.</p>
+        <div style="border: 2px dashed #ddd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <iframe src="/championship-widget?leagueId=7965&seasonId=50644&division=Overall&viewType=cars" 
+                    width="100%" height="600" frameborder="0" style="border-radius: 8px;"></iframe>
+        </div>
+    </div>
+
+    <!-- Load the widget script for demos -->
+    <script src="championship-widget.js"></script>
+    
+    <script>
+        // Update the widget script source to use current domain
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update API base in the widget configuration
+            const currentDomain = window.location.origin;
+            
+            // Update code examples to use current domain
+            const codeBlocks = document.querySelectorAll('.code-block');
+            codeBlocks.forEach(block => {
+                if (block.innerHTML.includes('https://your-domain.com')) {
+                    block.innerHTML = block.innerHTML.replace(/https:\/\/your-domain\.com/g, currentDomain);
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Publisher - UKSimRacing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 95%;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+
+        button {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(42, 82, 152, 0.3);
+        }
+
+        .generate-button {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .generate-button:hover {
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .code-output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .preview-container {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f8f9fa;
+            margin: 15px 0;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #dee2e6;
+        }
+
+        .tab-button.active {
+            background: #2a5298;
+            color: white;
+            border-color: #2a5298;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .copy-button {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            font-size: 12px;
+            padding: 8px 15px;
+        }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .back-link {
+            color: white;
+            text-decoration: none;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Championship Widget Publisher</h1>
+            <p>Generate embeddable widgets with built-in view controls and division filters</p>
+            <a href="/" class="back-link">← Back to Main App</a>
+        </div>
+
+        <!-- Configuration Section -->
+        <div class="section">
+            <h2>⚙️ Widget Configuration</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="leagueId">League ID:</label>
+                    <input type="text" id="leagueId" placeholder="Enter your league ID (e.g., 12345)">
+                </div>
+                <div class="form-group">
+                    <label for="seasonId">Season ID:</label>
+                    <input type="text" id="seasonId" placeholder="Enter your season ID (e.g., 67890)">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="maxRows">Maximum Drivers to Show:</label>
+                    <select id="maxRows">
+                        <option value="5">Top 5</option>
+                        <option value="10" selected>Top 10</option>
+                        <option value="15">Top 15</option>
+                        <option value="20">Top 20</option>
+                        <option value="0">All Drivers</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="autoRefresh">Auto-Refresh (seconds):</label>
+                    <select id="autoRefresh">
+                        <option value="0" selected>Disabled</option>
+                        <option value="300">5 minutes</option>
+                        <option value="600">10 minutes</option>
+                        <option value="1800">30 minutes</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="background: #e7f3ff; border: 1px solid #b3d7ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #1e3c72;">🎯 Universal Championship Widget</h4>
+                <p style="margin: 0; color: #495057;">This widget includes built-in controls allowing viewers to:</p>
+                <ul style="margin: 10px 0 0 20px; color: #495057;">
+                    <li>Switch between all championship views (Enhanced, Simple, Detailed, Statistics, Car Usage)</li>
+                    <li>Filter by any division/class</li>
+                    <li>View live standings that auto-update</li>
+                    <li>See complete championship configuration and points breakdown</li>
+                </ul>
+            </div>
+
+            <button onclick="generateWidgetCode()" class="generate-button">🚀 Generate Widget Code</button>
+            <button onclick="testWidget()">🔍 Test Widget</button>
+        </div>
+
+        <!-- Generated Code Section -->
+        <div class="section" id="codeSection" style="display: none;">
+            <h2>📋 Generated Widget Code</h2>
+            
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('iframe')">📄 iframe Embed</button>
+                <button class="tab-button" onclick="switchTab('javascript')">⚡ JavaScript Widget</button>
+                <button class="tab-button" onclick="switchTab('direct-links')">🔗 Direct Links</button>
+            </div>
+
+            <!-- iframe Tab -->
+            <div id="iframe-tab" class="tab-content active">
+                <h3>🖼️ iframe Embed Code</h3>
+                <p>Copy and paste this code into any HTML page to embed the interactive championship widget:</p>
+                <div class="code-output" id="iframeCode"></div>
+                <button onclick="copyToClipboard('iframeCode')" class="copy-button">📋 Copy Code</button>
+            </div>
+
+            <!-- JavaScript Tab -->
+            <div id="javascript-tab" class="tab-content">
+                <h3>⚡ JavaScript Widget Code</h3>
+                <p>Advanced integration option with full interactivity and customization:</p>
+                <div class="code-output" id="javascriptCode"></div>
+                <button onclick="copyToClipboard('javascriptCode')" class="copy-button">📋 Copy Code</button>
+            </div>
+
+            <!-- Direct Links Tab -->
+            <div id="direct-links-tab" class="tab-content">
+                <h3>🔗 Direct Links</h3>
+                <p>Standalone URLs for sharing, bookmarking, or direct access:</p>
+                <div class="code-output" id="directLinks"></div>
+                <button onclick="copyToClipboard('directLinks')" class="copy-button">📋 Copy Links</button>
+            </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="section" id="previewSection" style="display: none;">
+            <h2>👀 Live Preview</h2>
+            <p>This is how your widget will look when embedded:</p>
+            
+            <div class="preview-container">
+                <div id="widgetPreview"></div>
+            </div>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function generateWidgetCode() {
+            const leagueId = document.getElementById('leagueId').value.trim();
+            const seasonId = document.getElementById('seasonId').value.trim();
+            const maxRows = document.getElementById('maxRows').value;
+            const autoRefresh = document.getElementById('autoRefresh').value;
+
+            if (!leagueId || !seasonId) {
+                showStatus('Please enter both League ID and Season ID', 'error');
+                return;
+            }
+
+            const baseUrl = window.location.origin;
+            
+            // Build URL parameters
+            const params = new URLSearchParams({
+                leagueId: leagueId,
+                seasonId: seasonId,
+                maxRows: maxRows,
+                autoRefresh: autoRefresh
+            });
+
+            // Generate iframe code
+            const iframeUrl = `${baseUrl}/championship-widget?${params.toString()}`;
+            const iframeCode = `<iframe src="${iframeUrl}" 
+        width="100%" 
+        height="600" 
+        frameborder="0"
+        style="border-radius: 8px;">
+</iframe>`;
+
+            // Generate JavaScript code
+            const jsAttrs = [
+                `data-league-id="${leagueId}"`,
+                `data-season-id="${seasonId}"`,
+                `data-max-rows="${maxRows}"`,
+                `data-auto-refresh="${autoRefresh}"`
+            ];
+
+            const javascriptCode = `<!-- Include the widget script -->
+<script src="${baseUrl}/championship-widget.js"><\/script>
+
+<!-- Create a container for the widget -->
+<div id="uksimracing-championship" 
+     ${jsAttrs.join('\n     ')}>
+</div>`;
+
+            // Generate direct links
+            const widgetUrl = `${baseUrl}/championship-widget?${params.toString()}`;
+            const demoUrl = `${baseUrl}/widget`;
+            const directLinks = `Standalone Widget: ${widgetUrl}
+
+Widget Demo Page: ${demoUrl}
+
+Widget JavaScript: ${baseUrl}/championship-widget.js`;
+
+            // Update the code sections
+            document.getElementById('iframeCode').textContent = iframeCode;
+            document.getElementById('javascriptCode').textContent = javascriptCode;
+            document.getElementById('directLinks').textContent = directLinks;
+
+            // Show the code section
+            document.getElementById('codeSection').style.display = 'block';
+
+            showStatus('Widget code generated successfully!', 'success');
+        }
+
+        function testWidget() {
+            const leagueId = document.getElementById('leagueId').value.trim();
+            const seasonId = document.getElementById('seasonId').value.trim();
+
+            if (!leagueId || !seasonId) {
+                showStatus('Please enter both League ID and Season ID', 'error');
+                return;
+            }
+
+            // Create preview
+            const maxRows = document.getElementById('maxRows').value;
+            const autoRefresh = document.getElementById('autoRefresh').value;
+
+            const previewContainer = document.getElementById('widgetPreview');
+            previewContainer.innerHTML = `<div id="test-widget" 
+                data-league-id="${leagueId}" 
+                data-season-id="${seasonId}"
+                data-max-rows="${maxRows !== '0' ? maxRows : ''}"
+                data-auto-refresh="${autoRefresh !== '0' ? autoRefresh : ''}">
+            </div>`;
+
+            // Load the widget script if not already loaded
+            if (!window.UKSimRacingChampionshipWidget) {
+                const script = document.createElement('script');
+                script.src = '/championship-widget.js';
+                script.onload = () => {
+                    new window.UKSimRacingChampionshipWidget(document.getElementById('test-widget'));
+                };
+                document.head.appendChild(script);
+            } else {
+                new window.UKSimRacingChampionshipWidget(document.getElementById('test-widget'));
+            }
+
+            document.getElementById('previewSection').style.display = 'block';
+            showStatus('Widget preview loaded!', 'success');
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus('Code copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showStatus('Code copied to clipboard!', 'success');
+            });
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+
+        // Auto-populate from URL parameters if provided
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.get('leagueId')) {
+                document.getElementById('leagueId').value = urlParams.get('leagueId');
+            }
+            if (urlParams.get('seasonId')) {
+                document.getElementById('seasonId').value = urlParams.get('seasonId');
+            }
+            if (urlParams.get('maxRows')) {
+                document.getElementById('maxRows').value = urlParams.get('maxRows');
+            }
+            if (urlParams.get('autoRefresh')) {
+                document.getElementById('autoRefresh').value = urlParams.get('autoRefresh');
+            }
+
+            // Auto-generate if all required params are present
+            if (urlParams.get('leagueId') && urlParams.get('seasonId')) {
+                generateWidgetCode();
+            }
+        });
+    </script>
+</body>
+</html> 

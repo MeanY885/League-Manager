@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Championship Standings Widget</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* Copy exact styling from main app */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin: 30px 0;
+            background: white;
+        }
+
+        .results-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 15px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 1em;
+        }
+
+        .results-table td {
+            padding: 20px 15px;
+            border-bottom: 2px solid #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .results-table tbody tr:hover {
+            background: #f8f9fa !important;
+        }
+
+        .championship-tabs-container {
+            background: white;
+            margin: 15px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .championship-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+            padding: 0;
+        }
+
+        .championship-tab {
+            background: #f8f9fa;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 3px solid transparent;
+            flex: 1;
+            justify-content: center;
+            min-width: 120px;
+        }
+
+        .championship-tab:hover {
+            background: #e9ecef;
+            color: #2a5298;
+            transform: translateY(-1px);
+        }
+
+        .championship-tab.active {
+            background: #2a5298;
+            color: white;
+            border-bottom-color: #1e3c72;
+        }
+
+        .championship-tab .tab-count {
+            background: rgba(255,255,255,0.2);
+            color: inherit;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .championship-tab.active .tab-count {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2a5298;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+            margin: 20px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .championship-tabs {
+                flex-direction: column;
+            }
+            .championship-tab {
+                flex: none;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="resultsTitle" style="font-size: 1.8em; font-weight: bold; margin-bottom: 20px; text-align: center; color: #2a5298;">
+        🏆 Championship Standings
+    </div>
+    
+    <div id="resultsContainer">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading championship data...</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const leagueId = urlParams.get('leagueId');
+        const seasonId = urlParams.get('seasonId');
+        const requestedDivision = urlParams.get('division') || 'Overall';
+        const maxRows = parseInt(urlParams.get('maxRows')) || 0;
+        const showGap = urlParams.get('showGap') !== 'false';
+        const autoRefresh = parseInt(urlParams.get('autoRefresh')) || 0;
+        const requestedView = urlParams.get('viewType') || urlParams.get('view') || 'enhanced';
+
+        // Global variables to match main app
+        let currentDivisionFilter = requestedDivision;
+        let currentChampionshipData = null;
+        let currentChampionshipView = requestedView;
+
+        function showLoading() {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading championship data...</p>
+                </div>
+            `;
+        }
+
+        function displayError(message) {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = `
+                <div class="error">
+                    <strong>Error</strong><br>
+                    ${message}
+                </div>
+            `;
+        }
+
+        // Initialize widget on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!leagueId || !seasonId) {
+                displayError('Missing required parameters: leagueId and seasonId');
+                return;
+            }
+
+            loadChampionshipData();
+            setupAutoRefresh();
+        });
+
+        async function loadChampionshipData() {
+            try {
+                showLoading();
+                
+                const response = await fetch(`/api/league/${leagueId}/season/${seasonId}/championship?cached=true`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load championship data');
+                }
+                
+                const data = await response.json();
+                currentChampionshipData = data;
+                displayChampionshipStandings(data);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                displayError('Failed to load championship data: ' + error.message);
+            }
+        }
+
+        function displayChampionshipStandings(data) {
+            const container = document.getElementById('resultsContainer');
+            const title = document.getElementById('resultsTitle');
+            
+            title.textContent = '🏆 Championship Standings';
+            
+            if (!data.standings || Object.keys(data.standings).length === 0) {
+                container.innerHTML = '<p>No championship data available. Make sure the season has completed races.</p>';
+                return;
+            }
+
+            const pointsConfigName = data.points_config?.name || 'Unknown';
+            const dropWeeks = data.points_config?.dropWeeks || 0;
+            const fastestLapPoints = data.points_config?.fastestLapPoints || 0;
+            const polePositionPoints = data.points_config?.polePositionPoints || 0;
+            
+            // Division filter - get all available divisions
+            const divisions = data.all_divisions || Object.keys(data.standings);
+            
+            // Ensure "Overall" is first in the list if it exists
+            const sortedDivisions = divisions.sort((a, b) => {
+                if (a === 'Overall') return -1;
+                if (b === 'Overall') return 1;
+                return a.localeCompare(b);
+            });
+
+            // If requested division doesn't exist, use first available
+            if (!data.standings[currentDivisionFilter]) {
+                currentDivisionFilter = sortedDivisions[0] || 'Overall';
+            }
+            
+            // Create division tab navigation (only if multiple divisions)
+            let divisionTabs = '';
+            if (sortedDivisions.length > 1) {
+                divisionTabs = `
+                    <div class="championship-tabs-container">
+                        <h4 style="margin: 0 0 10px 20px; color: #495057;">🏁 Division Filter</h4>
+                        <div class="championship-tabs">
+                            ${sortedDivisions.map(div => 
+                                `<button class="championship-tab ${currentDivisionFilter === div ? 'active' : ''}" 
+                                         onclick="switchChampionshipTab('${div}')" 
+                                         data-division="${div}">
+                                    ${div === 'Overall' ? '🏆 Overall' : div}
+                                    <span class="tab-count">${data.standings[div] ? data.standings[div].length : 0}</span>
+                                </button>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Create view option tabs (only if simple view was not specifically requested)
+            let viewTabs = '';
+            if (requestedView !== 'simple') {
+                viewTabs = `
+                    <div class="championship-tabs-container">
+                        <h4 style="margin: 0 0 10px 20px; color: #495057;">📋 View Options</h4>
+                        <div class="championship-tabs">
+                            <button class="championship-tab ${currentChampionshipView === 'enhanced' ? 'active' : ''}" onclick="switchChampionshipView('enhanced')" data-view="enhanced">
+                                🚀 Enhanced
+                            </button>
+                            <button class="championship-tab ${currentChampionshipView === 'simple' ? 'active' : ''}" onclick="switchChampionshipView('simple')" data-view="simple">
+                                📊 Simple
+                            </button>
+                            <button class="championship-tab ${currentChampionshipView === 'detailed' ? 'active' : ''}" onclick="switchChampionshipView('detailed')" data-view="detailed">
+                                📈 Detailed
+                            </button>
+                            <button class="championship-tab ${currentChampionshipView === 'stats' ? 'active' : ''}" onclick="switchChampionshipView('stats')" data-view="stats">
+                                📈 Statistics
+                            </button>
+                            <button class="championship-tab ${currentChampionshipView === 'cars' ? 'active' : ''}" onclick="switchChampionshipView('cars')" data-view="cars">
+                                🚗 Car Usage
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            let standingsHTML = `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 15px 0; font-size: 1.4em;">🏆 Championship Configuration</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                        <div><strong>📊 Points System:</strong><br>${pointsConfigName}</div>
+                        ${dropWeeks > 0 ? `<div><strong>📉 Drop Weeks:</strong><br>${dropWeeks} lowest scores dropped</div>` : ''}
+                        ${fastestLapPoints > 0 ? `<div><strong>⚡ Fastest Lap:</strong><br>+${fastestLapPoints} point(s) per race</div>` : ''}
+                        ${polePositionPoints > 0 ? `<div><strong>🏁 Pole Position:</strong><br>+${polePositionPoints} point(s) per race</div>` : ''}
+                        <div><strong>⚠️ Penalties:</strong><br>Included in calculations</div>
+                    </div>
+                </div>
+                
+                ${viewTabs}
+                ${divisionTabs}
+                
+                <div id="championshipContent"></div>
+            `;
+            
+            container.innerHTML = standingsHTML;
+            
+            // Show the appropriate view
+            switchChampionshipView(currentChampionshipView);
+        }
+
+        function switchChampionshipView(viewType) {
+            // Update active view tab
+            document.querySelectorAll('[data-view]').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            const viewTab = document.querySelector(`[data-view="${viewType}"]`);
+            if (viewTab) viewTab.classList.add('active');
+            
+            // Store current view
+            currentChampionshipView = viewType;
+            
+            // Get the data for current division, apply maxRows if specified
+            let drivers = currentChampionshipData.standings[currentDivisionFilter] || [];
+            if (maxRows > 0) {
+                drivers = drivers.slice(0, maxRows);
+            }
+            
+            // Show appropriate view
+            switch(viewType) {
+                case 'enhanced':
+                    showEnhancedView(drivers, currentChampionshipData);
+                    break;
+                case 'simple':
+                    showSimpleView(drivers, currentChampionshipData);
+                    break;
+                case 'detailed':
+                    showDetailedView(drivers, currentChampionshipData);
+                    break;
+                case 'stats':
+                    showStatsView(drivers, currentChampionshipData);
+                    break;
+                case 'cars':
+                    showCarUsageView(drivers, currentChampionshipData);
+                    break;
+            }
+        }
+
+        function switchChampionshipTab(division) {
+            // Update active division tab
+            document.querySelectorAll('[data-division]').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            const divTab = document.querySelector(`[data-division="${division}"]`);
+            if (divTab) divTab.classList.add('active');
+            
+            // Update current filter
+            currentDivisionFilter = division;
+            
+            // Refresh the current view with new division
+            switchChampionshipView(currentChampionshipView);
+        }
+
+        // Now copy the simplified view functions adapted for widget
+        function showSimpleView(drivers, data) {
+            const contentDiv = document.getElementById('championshipContent');
+            
+            if (!drivers || drivers.length === 0) {
+                contentDiv.innerHTML = `<div style="text-align: center; padding: 40px; color: #6c757d;">
+                    <h3>No drivers found in ${currentDivisionFilter} division</h3>
+                    <p>This division may not have any drivers assigned or races completed.</p>
+                </div>`;
+                return;
+            }
+
+            let html = `
+                <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
+                    <table class="results-table" style="margin: 0;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center;">Pos</th>
+                                <th>Driver</th>
+                                <th style="text-align: center;">Points</th>
+                                ${showGap ? '<th style="text-align: center;">Gap</th>' : ''}
+                                <th style="text-align: center;">Races</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${drivers.map((driver, index) => {
+                                const pointsGap = index === 0 ? '-' : drivers[0].total_points - driver.total_points;
+                                let positionStyle = 'font-weight: bold; text-align: center;';
+                                if (index === 0) positionStyle += ' color: #ffd700;';
+                                else if (index === 1) positionStyle += ' color: #c0c0c0;';
+                                else if (index === 2) positionStyle += ' color: #cd7f32;';
+                                
+                                return `
+                                    <tr>
+                                        <td style="${positionStyle}">
+                                            ${driver.championship_position}
+                                            ${index === 0 ? ' 👑' : index === 1 ? ' 🥈' : index === 2 ? ' 🥉' : ''}
+                                        </td>
+                                        <td style="font-weight: bold;">${driver.display_name}</td>
+                                        <td style="text-align: center; font-weight: bold; color: #2a5298;">${driver.total_points}</td>
+                                        ${showGap ? `<td style="text-align: center; color: #6c757d;">${pointsGap === '-' ? '-' : '+' + pointsGap}</td>` : ''}
+                                        <td style="text-align: center;">${driver.races.length}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = html;
+        }
+
+        function showEnhancedView(drivers, data) {
+            const contentDiv = document.getElementById('championshipContent');
+            
+            if (!drivers || drivers.length === 0) {
+                contentDiv.innerHTML = `<div style="text-align: center; padding: 40px; color: #6c757d;">
+                    <h3>No drivers found in ${currentDivisionFilter} division</h3>
+                    <p>This division may not have any drivers assigned or races completed.</p>
+                </div>`;
+                return;
+            }
+
+            // Calculate division statistics
+            const totalDrivers = drivers.length;
+            const totalRaces = Math.max(...drivers.map(d => d.races.length));
+            const avgPointsPerRace = drivers.reduce((sum, d) => sum + (d.total_points / Math.max(d.races.length, 1)), 0) / totalDrivers;
+            const topPoints = drivers[0]?.total_points || 0;
+            const pointsGap = drivers.length > 1 ? topPoints - drivers[1].total_points : 0;
+
+            let html = `
+                <div style="background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 15px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h2 style="margin: 0 0 20px 0; font-size: 1.8em; text-align: center;">
+                        ${currentDivisionFilter === 'Overall' ? '🏆 Overall Championship' : `🏁 ${currentDivisionFilter} Championship`}
+                    </h2>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; text-align: center;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
+                            <div style="font-size: 2em; font-weight: bold;">${totalDrivers}</div>
+                            <div style="font-size: 0.9em; opacity: 0.9;">Drivers</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
+                            <div style="font-size: 2em; font-weight: bold;">${totalRaces}</div>
+                            <div style="font-size: 0.9em; opacity: 0.9;">Max Races</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
+                            <div style="font-size: 2em; font-weight: bold;">${avgPointsPerRace.toFixed(1)}</div>
+                            <div style="font-size: 0.9em; opacity: 0.9;">Avg Pts/Race</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
+                            <div style="font-size: 2em; font-weight: bold;">${pointsGap}</div>
+                            <div style="font-size: 0.9em; opacity: 0.9;">Points Gap</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1); margin-bottom: 30px;">
+                    <table class="results-table" style="margin: 0; border-radius: 15px;">
+                        <thead>
+                            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <th style="text-align: center; padding: 20px 15px;">Position</th>
+                                <th style="padding: 20px 15px;">Driver Details</th>
+                                <th style="text-align: center; padding: 20px 15px;">Performance</th>
+                                <th style="text-align: center; padding: 20px 15px;">Race Stats</th>
+                                <th style="text-align: center; padding: 20px 15px;">Bonuses</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${drivers.map((driver, index) => {
+                                const raceCount = driver.races.length;
+                                const avgPoints = raceCount > 0 ? (driver.total_points / raceCount).toFixed(1) : '0.0';
+                                const bestFinish = Math.min(...driver.races.map(r => Math.round(r.division_position)));
+                                const avgFinish = raceCount > 0 ? Math.round(driver.races.reduce((sum, r) => sum + Math.round(r.division_position), 0) / raceCount) : 'N/A';
+                                
+                                const fastestLaps = driver.races.filter(r => r.fastest_lap).length;
+                                const poles = driver.races.filter(r => r.pole_position).length;
+                                const penaltyCount = driver.races.filter(r => r.penalty_points > 0).length;
+                                
+                                // Position styling
+                                let positionStyle = 'font-size: 1.5em; font-weight: bold; padding: 15px; text-align: center; border-radius: 10px; margin: 5px;';
+                                let positionBg = '#6c757d';
+                                if (index === 0) positionBg = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
+                                else if (index === 1) positionBg = 'linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%)';
+                                else if (index === 2) positionBg = 'linear-gradient(135deg, #cd7f32 0%, #daa520 100%)';
+                                else if (index < 5) positionBg = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                                
+                                return `
+                                    <tr style="border-bottom: 2px solid #f8f9fa;">
+                                        <td style="text-align: center; padding: 20px 15px;">
+                                            <div style="${positionStyle} background: ${positionBg}; color: ${index < 3 ? 'black' : 'white'};">
+                                                ${driver.championship_position}
+                                                ${index === 0 ? '<br>👑' : index === 1 ? '<br>🥈' : index === 2 ? '<br>🥉' : ''}
+                                            </div>
+                                        </td>
+                                        <td style="padding: 20px 15px;">
+                                            <div style="font-size: 1.2em; font-weight: bold; color: #2c3e50; margin-bottom: 8px;">
+                                                ${driver.display_name}
+                                            </div>
+                                            <div style="color: #6c757d; font-size: 0.9em;">
+                                                <strong>Car #:</strong> ${driver.car_number || 'N/A'}
+                                            </div>
+                                        </td>
+                                        <td style="text-align: center; padding: 20px 15px;">
+                                            <div style="font-size: 1.8em; font-weight: bold; color: #2c3e50; margin-bottom: 10px;">
+                                                ${driver.total_points}
+                                            </div>
+                                            <div style="font-size: 0.9em; color: #6c757d;">
+                                                <strong>Avg:</strong> ${avgPoints} pts/race
+                                            </div>
+                                        </td>
+                                        <td style="text-align: center; padding: 20px 15px;">
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9em;">
+                                                <div><strong>Races:</strong> ${raceCount}</div>
+                                                <div><strong>Best:</strong> P${bestFinish}</div>
+                                                <div><strong>Avg:</strong> P${avgFinish}</div>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: center; padding: 20px 15px;">
+                                            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">
+                                                ${fastestLaps > 0 ? `<div style="background: #28a745; color: white; padding: 4px 8px; border-radius: 15px;">⚡ ${fastestLaps}</div>` : ''}
+                                                ${poles > 0 ? `<div style="background: #ffc107; color: black; padding: 4px 8px; border-radius: 15px;">🏁 ${poles}</div>` : ''}
+                                                ${penaltyCount > 0 ? `<div style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 15px;">⚠️ ${penaltyCount}</div>` : ''}
+                                                ${fastestLaps === 0 && poles === 0 && penaltyCount === 0 ? '<div style="color: #6c757d;">None</div>' : ''}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = html;
+        }
+
+        // Simplified implementations for other views
+        function showDetailedView(drivers, data) {
+            const contentDiv = document.getElementById('championshipContent');
+            
+            if (!drivers || drivers.length === 0) {
+                contentDiv.innerHTML = `<div style="text-align: center; padding: 40px; color: #6c757d;">
+                    <h3>No drivers found in ${currentDivisionFilter} division</h3>
+                    <p>This division may not have any drivers assigned or races completed.</p>
+                </div>`;
+                return;
+            }
+            
+            // Get all unique races
+            const allRaces = [];
+            const raceMap = new Map();
+            
+            drivers.forEach(driver => {
+                driver.races.forEach(race => {
+                    const raceKey = race.subsession_id || race.session_name;
+                    if (!raceMap.has(raceKey)) {
+                        raceMap.set(raceKey, {
+                            id: raceKey,
+                            name: race.session_name || 'Race',
+                            track: race.track_name || 'Unknown Track',
+                            date: race.date
+                        });
+                        allRaces.push(raceMap.get(raceKey));
+                    }
+                });
+            });
+            
+            allRaces.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            const raceHeaders = allRaces.map((race, index) => {
+                const shortTrack = race.track.length > 12 ? race.track.substring(0, 12) + '...' : race.track;
+                return `<th style="min-width: 60px; text-align: center;" title="${race.track}">R${index + 1}<br><small>${shortTrack}</small></th>`;
+            }).join('');
+            
+            const dropWeeks = data.points_config?.dropWeeks || 0;
+            const fastestLapPoints = data.points_config?.fastestLapPoints || 0;
+            const polePositionPoints = data.points_config?.polePositionPoints || 0;
+            
+            let html = `
+                <h3>🏁 ${currentDivisionFilter} Championship - Detailed Breakdown</h3>
+                ${dropWeeks > 0 || fastestLapPoints > 0 || polePositionPoints > 0 ? `<p style="color: #666; font-style: italic; margin-bottom: 10px;">
+                    ${dropWeeks > 0 ? `<strong>Drop Weeks:</strong> ${dropWeeks} lowest scores dropped. Dropped scores shown with strikethrough.<br>` : ''}
+                    ${fastestLapPoints > 0 ? `<strong>Fastest Lap:</strong> ${fastestLapPoints}pt bonus per race shown with ⚡ symbol.<br>` : ''}
+                    ${polePositionPoints > 0 ? `<strong>Pole Position:</strong> ${polePositionPoints}pt bonus per race shown with 🏁 symbol.<br>` : ''}
+                    <strong>Penalties:</strong> Shown with ⚠️ symbol and subtracted from total.
+                </p>` : ''}
+                <div style="overflow-x: auto; margin-bottom: 20px;">
+                    <table class="results-table" style="min-width: 800px;">
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th style="min-width: 150px;">Driver</th>
+                                <th>Car #</th>
+                                <th>Total</th>
+                                ${raceHeaders}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${drivers.map(driver => {
+                                const driverRaceResults = new Map();
+                                driver.races.forEach(race => {
+                                    const raceKey = race.subsession_id || race.session_name;
+                                    driverRaceResults.set(raceKey, race);
+                                });
+                                
+                                const raceCells = allRaces.map(race => {
+                                    const result = driverRaceResults.get(race.id);
+                                    if (result) {
+                                        let cellContent = result.points.toString();
+                                        let cellTitle = `P${result.division_position} - ${result.points} points`;
+                                        let cellStyle = 'text-align: center; padding: 8px;';
+                                        
+                                        // Add bonuses and penalties
+                                        if (result.fastest_lap) {
+                                            cellContent += ' ⚡';
+                                            cellTitle += ` + ${fastestLapPoints} fastest lap`;
+                                        }
+                                        if (result.pole_position) {
+                                            cellContent += ' 🏁';
+                                            cellTitle += ` + ${polePositionPoints} pole position`;
+                                        }
+                                        if (result.penalty_points > 0) {
+                                            cellContent += ' ⚠️';
+                                            cellTitle += ` - ${result.penalty_points} penalty`;
+                                        }
+                                        
+                                        // Strike through if dropped
+                                        if (result.dropped) {
+                                            cellStyle += ' text-decoration: line-through; color: #999;';
+                                            cellTitle += ' (DROPPED)';
+                                        }
+                                        
+                                        // Color based on position
+                                        if (result.division_position === 1) {
+                                            cellStyle += ' background-color: #ffd700; font-weight: bold;';
+                                        } else if (result.division_position === 2) {
+                                            cellStyle += ' background-color: #e6e6fa; font-weight: bold;';
+                                        } else if (result.division_position === 3) {
+                                            cellStyle += ' background-color: #deb887; font-weight: bold;';
+                                        }
+                                        
+                                        return `<td style="${cellStyle}" title="${cellTitle}">${cellContent}</td>`;
+                                    } else {
+                                        return `<td style="text-align: center; color: #ccc;">-</td>`;
+                                    }
+                                }).join('');
+                                
+                                return `
+                                    <tr>
+                                        <td style="font-weight: bold; text-align: center;">${driver.championship_position}</td>
+                                        <td><strong>${driver.display_name}</strong></td>
+                                        <td>${driver.car_number || 'N/A'}</td>
+                                        <td><strong>${driver.total_points}</strong></td>
+                                        ${raceCells}
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = html;
+        }
+
+        function showStatsView(drivers, data) {
+            const contentDiv = document.getElementById('championshipContent');
+            
+            if (!drivers || drivers.length === 0) {
+                contentDiv.innerHTML = `<div style="text-align: center; padding: 40px; color: #6c757d;">
+                    <h3>No drivers found in ${currentDivisionFilter} division</h3>
+                    <p>This division may not have any drivers assigned or races completed.</p>
+                </div>`;
+                return;
+            }
+            
+            // Calculate comprehensive statistics
+            const allRaces = [];
+            const raceMap = new Map();
+            
+            drivers.forEach(driver => {
+                driver.races.forEach(race => {
+                    const raceKey = race.subsession_id || race.session_name;
+                    if (!raceMap.has(raceKey)) {
+                        raceMap.set(raceKey, {
+                            id: raceKey,
+                            name: race.session_name || 'Race',
+                            track: race.track_name || 'Unknown Track',
+                            date: race.date,
+                            participants: 0,
+                            avgPoints: 0,
+                            fastestLapWinner: null,
+                            poleWinner: null
+                        });
+                        allRaces.push(raceMap.get(raceKey));
+                    }
+                });
+            });
+            
+            // Calculate race statistics
+            allRaces.forEach(race => {
+                const raceResults = [];
+                drivers.forEach(driver => {
+                    const driverRace = driver.races.find(r => (r.subsession_id || r.session_name) === race.id);
+                    if (driverRace) {
+                        raceResults.push(driverRace);
+                        if (driverRace.fastest_lap) race.fastestLapWinner = driver.display_name;
+                        if (driverRace.pole_position) race.poleWinner = driver.display_name;
+                    }
+                });
+                race.participants = raceResults.length;
+                race.avgPoints = raceResults.length > 0 ? raceResults.reduce((sum, r) => sum + r.points, 0) / raceResults.length : 0;
+            });
+            
+            allRaces.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            let html = `
+                <div style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white; border-radius: 15px; padding: 25px; margin-bottom: 25px;">
+                    <h2 style="margin: 0 0 20px 0; text-align: center;">📈 ${currentDivisionFilter} Championship Statistics</h2>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <!-- Race-by-Race Breakdown -->
+                    <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <h4 style="margin: 0 0 15px 0; color: #495057;">🏁 Race-by-Race Breakdown</h4>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${allRaces.map((race, index) => `
+                                <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: #f8f9fa;">
+                                    <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;">
+                                        Round ${index + 1}: ${race.track}
+                                    </div>
+                                    <div style="font-size: 0.9em; color: #6c757d;">
+                                        <strong>Participants:</strong> ${race.participants}<br>
+                                        <strong>Avg Points:</strong> ${race.avgPoints.toFixed(1)}<br>
+                                        ${race.poleWinner ? `<strong>Pole:</strong> ${race.poleWinner}<br>` : ''}
+                                        ${race.fastestLapWinner ? `<strong>Fastest Lap:</strong> ${race.fastestLapWinner}` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Driver Performance Stats -->
+                    <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <h4 style="margin: 0 0 15px 0; color: #495057;">🏆 Performance Leaders</h4>
+                        
+                        <!-- Most Consistent (lowest avg finish position) -->
+                        <div style="margin-bottom: 20px;">
+                            <h5 style="color: #28a745; margin-bottom: 10px;">🎯 Most Consistent</h5>
+                            ${drivers.slice(0, 5).map(driver => {
+                                const avgFinish = driver.races.length > 0 ? Math.round(driver.races.reduce((sum, r) => sum + Math.round(r.division_position), 0) / driver.races.length) : 'N/A';
+                                return `<div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                    <span>${driver.display_name}</span>
+                                    <span style="font-weight: bold;">P${avgFinish}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                        
+                        <!-- Most Fastest Laps -->
+                        <div style="margin-bottom: 20px;">
+                            <h5 style="color: #ffc107; margin-bottom: 10px;">⚡ Fastest Lap Masters</h5>
+                            ${drivers
+                                .map(driver => ({
+                                    ...driver,
+                                    fastestLaps: driver.races.filter(r => r.fastest_lap).length
+                                }))
+                                .sort((a, b) => b.fastestLaps - a.fastestLaps)
+                                .slice(0, 5)
+                                .map(driver => `<div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                    <span>${driver.display_name}</span>
+                                    <span style="font-weight: bold;">${driver.fastestLaps}</span>
+                                </div>`).join('')}
+                        </div>
+                        
+                        <!-- Most Poles -->
+                        <div>
+                            <h5 style="color: #17a2b8; margin-bottom: 10px;">🏁 Pole Position Kings</h5>
+                            ${drivers
+                                .map(driver => ({
+                                    ...driver,
+                                    poles: driver.races.filter(r => r.pole_position).length
+                                }))
+                                .sort((a, b) => b.poles - a.poles)
+                                .slice(0, 5)
+                                .map(driver => `<div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                    <span>${driver.display_name}</span>
+                                    <span style="font-weight: bold;">${driver.poles}</span>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = html;
+        }
+
+        function showCarUsageView(drivers, data) {
+            const contentDiv = document.getElementById('championshipContent');
+            
+            if (!drivers || drivers.length === 0) {
+                contentDiv.innerHTML = `<div style="text-align: center; padding: 40px; color: #6c757d;">
+                    <h3>No drivers found in ${currentDivisionFilter} division</h3>
+                    <p>This division may not have any drivers assigned or races completed.</p>
+                </div>`;
+                return;
+            }
+            
+            // Get all unique races
+            const allRaces = [];
+            const raceMap = new Map();
+            
+            drivers.forEach(driver => {
+                driver.races.forEach(race => {
+                    const raceKey = race.subsession_id || race.session_name;
+                    if (!raceMap.has(raceKey)) {
+                        raceMap.set(raceKey, {
+                            id: raceKey,
+                            name: race.session_name || 'Race',
+                            track: race.track_name || 'Unknown Track',
+                            date: race.date
+                        });
+                        allRaces.push(raceMap.get(raceKey));
+                    }
+                });
+            });
+            
+            allRaces.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            const raceHeaders = allRaces.map((race, index) => {
+                const shortTrack = race.track.length > 12 ? race.track.substring(0, 12) + '...' : race.track;
+                return `<th style="min-width: 120px; text-align: center;" title="${race.track}">R${index + 1}<br><small>${shortTrack}</small></th>`;
+            }).join('');
+            
+            let html = `
+                <div style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border-radius: 15px; padding: 25px; margin-bottom: 25px;">
+                    <h2 style="margin: 0 0 20px 0; text-align: center;">🚗 ${currentDivisionFilter} Car Usage Analysis</h2>
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                        <strong>ℹ️ Color Coding:</strong> 
+                        <span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 3px; margin: 0 5px;">First Car / Same as First</span>
+                        <span style="background: #ffc107; color: black; padding: 2px 8px; border-radius: 3px; margin: 0 5px;">Different from First Car</span>
+                        <span style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 3px; margin: 0 5px;">DNP (Did Not Participate)</span>
+                        <span style="background: #6c757d; color: white; padding: 2px 8px; border-radius: 3px; margin: 0 5px;">No Data</span>
+                    </div>
+                </div>
+                
+                <div style="overflow-x: auto; margin-bottom: 20px;">
+                    <table class="results-table" style="min-width: 800px;">
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th style="min-width: 150px;">Driver</th>
+                                <th>Points</th>
+                                ${raceHeaders}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${drivers.map(driver => {
+                                const driverRaceResults = new Map();
+                                driver.races.forEach(race => {
+                                    const raceKey = race.subsession_id || race.session_name;
+                                    driverRaceResults.set(raceKey, race);
+                                });
+                                
+                                // Find THIS driver's first car
+                                const thisDriverSortedRaces = [...driver.races].sort((a, b) => new Date(a.date) - new Date(b.date));
+                                let thisDriverFirstCarName = null;
+                                
+                                for (const race of thisDriverSortedRaces) {
+                                    const carName = race.car_name || 'Unknown Car';
+                                    const didNotParticipate = race.attended === false || 
+                                                           race.points === 0 ||
+                                                           carName.toLowerCase().includes('did not participate') || 
+                                                           carName.toLowerCase().includes('no car') ||
+                                                           carName === 'Unknown Car' ||
+                                                           race.division_position === null ||
+                                                           race.division_position === 0;
+                                    
+                                    if (!didNotParticipate) {
+                                        thisDriverFirstCarName = carName.replace(/\s+/g, ' ').trim().toLowerCase();
+                                        break;
+                                    }
+                                }
+                                
+                                const raceCells = allRaces.map(race => {
+                                    const result = driverRaceResults.get(race.id);
+                                    if (result) {
+                                        const carName = result.car_name || 'Unknown Car';
+                                        const didNotParticipate = result.attended === false || 
+                                                               result.points === 0 ||
+                                                               carName.toLowerCase().includes('did not participate') || 
+                                                               carName.toLowerCase().includes('no car') ||
+                                                               carName === 'Unknown Car' ||
+                                                               result.division_position === null ||
+                                                               result.division_position === 0;
+                                        
+                                        if (didNotParticipate) {
+                                            return `<td style="text-align: center; padding: 8px; font-size: 11px; color: white; background-color: #dc3545;" title="Did Not Participate">DNP</td>`;
+                                        } else {
+                                            const shortCarName = carName.length > 15 ? carName.substring(0, 15) + '...' : carName;
+                                            const normalizedCarName = carName.replace(/\s+/g, ' ').trim().toLowerCase();
+                                            const isMatch = normalizedCarName === thisDriverFirstCarName;
+                                            
+                                            const bgColor = isMatch ? '#28a745' : '#ffc107';
+                                            const textColor = isMatch ? 'white' : 'black';
+                                            
+                                            return `<td style="text-align: center; padding: 8px; font-size: 11px; color: ${textColor}; background-color: ${bgColor};" title="${carName} (P${result.division_position})">${shortCarName}</td>`;
+                                        }
+                                    } else {
+                                        return `<td style="text-align: center; padding: 8px; font-size: 11px; color: white; background-color: #6c757d;" title="No Data">No Data</td>`;
+                                    }
+                                }).join('');
+                                
+                                return `
+                                    <tr>
+                                        <td style="font-weight: bold; text-align: center;">${driver.championship_position}</td>
+                                        <td><strong>${driver.display_name}</strong></td>
+                                        <td><strong>${driver.total_points}</strong></td>
+                                        ${raceCells}
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Car Usage Summary -->
+                <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <h4 style="margin: 0 0 15px 0; color: #495057;">🚗 Car Usage Summary</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        ${(() => {
+                            // Calculate car usage statistics
+                            const carUsage = {};
+                            const driverCarChanges = {};
+                            
+                            drivers.forEach(driver => {
+                                let firstCarName = null;
+                                let changes = 0;
+                                
+                                const sortedRaces = [...driver.races].sort((a, b) => new Date(a.date) - new Date(b.date));
+                                
+                                sortedRaces.forEach(race => {
+                                    const carName = race.car_name || 'Unknown Car';
+                                    const didNotParticipate = race.attended === false || 
+                                                           race.points === 0 ||
+                                                           carName.toLowerCase().includes('did not participate') || 
+                                                           carName.toLowerCase().includes('no car') ||
+                                                           carName === 'Unknown Car' ||
+                                                           race.division_position === null ||
+                                                           race.division_position === 0;
+                                    
+                                    if (!didNotParticipate) {
+                                        if (!carUsage[carName]) {
+                                            carUsage[carName] = { count: 0, drivers: new Set() };
+                                        }
+                                        carUsage[carName].count++;
+                                        carUsage[carName].drivers.add(driver.display_name);
+                                        
+                                        const normalizedCarName = carName.replace(/\s+/g, ' ').trim().toLowerCase();
+                                        
+                                        if (firstCarName === null) {
+                                            firstCarName = normalizedCarName;
+                                        } else if (normalizedCarName !== firstCarName) {
+                                            changes++;
+                                        }
+                                    }
+                                });
+                                
+                                driverCarChanges[driver.display_name] = changes;
+                            });
+                            
+                            const popularCars = Object.entries(carUsage)
+                                .sort((a, b) => b[1].count - a[1].count)
+                                .slice(0, 5);
+                            
+                            const mostChanges = Object.entries(driverCarChanges)
+                                .sort((a, b) => b[1] - a[1])
+                                .slice(0, 5);
+                            
+                            return `
+                                <div>
+                                    <h5 style="color: #17a2b8; margin-bottom: 10px;">🏆 Most Popular Cars</h5>
+                                    ${popularCars.map(([car, data]) => `
+                                        <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                            <span title="${car}">${car.length > 20 ? car.substring(0, 20) + '...' : car}</span>
+                                            <span style="font-weight: bold;">${data.count} uses</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div>
+                                    <h5 style="color: #ffc107; margin-bottom: 10px;">🔄 Most Car Changes</h5>
+                                    <small style="color: #666; display: block; margin-bottom: 10px;">
+                                        (Only counting changes between participated races)
+                                    </small>
+                                    ${mostChanges.map(([driver, changes]) => `
+                                        <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                            <span>${driver}</span>
+                                            <span style="font-weight: bold;">${changes} change${changes !== 1 ? 's' : ''}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `;
+                        })()}
+                    </div>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = html;
+        }
+
+        // Auto-refresh functionality
+        function setupAutoRefresh() {
+            if (autoRefresh > 0) {
+                setInterval(loadChampionshipData, autoRefresh * 1000);
+            }
+        }
+
+        // Expose reload function for parent window
+        window.reloadWidget = loadChampionshipData;
+    </script>
+</body>
+</html> 
