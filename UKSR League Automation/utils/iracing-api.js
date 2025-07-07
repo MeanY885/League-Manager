@@ -92,12 +92,24 @@ async function authenticateWithIRacing(username, password) {
         // We only want the name=value part
         const cookieMatch = cookieString.match(/^([^=]+)=([^;]*)/);
         if (cookieMatch) {
-            cookieValues.push(`${cookieMatch[1]}=${cookieMatch[2]}`);
+            const cookieName = cookieMatch[1];
+            const cookieValue = cookieMatch[2];
+            
+            // Only add cookies that have actual values
+            if (cookieValue && cookieValue.trim() !== '') {
+                cookieValues.push(`${cookieName}=${cookieValue}`);
+            }
         }
     });
 
     const formattedCookies = cookieValues.join('; ');
     console.log('Formatted cookies for storage:', formattedCookies);
+    
+    // Validate that we have actual authentication cookies
+    if (!formattedCookies || formattedCookies.trim() === '') {
+        console.error('Authentication failed: No valid cookies received from iRacing');
+        throw new Error('Authentication failed: Invalid credentials or iRacing service unavailable');
+    }
     
     // Return the properly formatted cookie string
     return formattedCookies;
